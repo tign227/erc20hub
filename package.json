@@ -12,6 +12,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",
     "chai": "^4.3.10",
+    "chai-as-promised": "^7.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
