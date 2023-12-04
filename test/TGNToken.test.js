@@ -1,12 +1,15 @@
+const { should } = require("chai");
+
 const TGNToken = artifacts.require("TGNToken");
 
 require("chai").use(require("chai-as-promised")).should();
 
 contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
   let token;
+  let totalSupply = 10000;
 
   beforeEach(async () => {
-    token = await TGNToken.new(10000);
+    token = await TGNToken.new(totalSupply);
   });
 
   describe("Token deployment", () => {
@@ -26,9 +29,55 @@ contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
       const totalSupply = await token.totalSupply();
       totalSupply.toString().should.equal("10000");
     });
-    it("Test balance", async () => {
+    it("Test balance of owner", async () => {
       const balance = await token.balanceOf(owner);
       balance.toString().should.equal("10000");
+    });
+  });
+
+  describe("Send token", () => {
+    let transferAmount = 1000;
+    let result;
+
+    describe("success", () => {
+      beforeEach(async () => {
+        result = await token.transfer(receiver, transferAmount, {
+          from: owner,
+        });
+      });
+
+      it("Test transfer token balance", async () => {
+        let balanceOfOwner = await token.balanceOf(owner);
+        balanceOfOwner
+          .toString()
+          .should.equal((totalSupply - transferAmount).toString());
+
+        let balanceOfReceiver = await token.balanceOf(receiver);
+        balanceOfReceiver.toString().should.equal(transferAmount.toString());
+      });
+
+      it("Test emit transfer event", async () => {
+        const log = result.logs[0];
+        log.event.should.equal("Transfer");
+        const args = log.args;
+        args.from.toString().should.equal(owner, "from is correct");
+        args.to.toString().should.equal(receiver, "to is correct");
+        args.value
+          .toString()
+          .should.equal(transferAmount.toString(), "amount is correct");
+      });
+    });
+
+    describe("failure", () => {
+      it("Test insufficient balances", async () => {
+        let invalidAmount = "1000000000";
+        token.transfer(receiver, invalidAmount, { from: owner }).should.be
+          .rejected;
+      });
+
+      it("Test invalid receipients", async () => {
+        token.transfer(0x0, transferAmount, { from: owner }).should.be.rejected;
+      });
     });
   });
 });
