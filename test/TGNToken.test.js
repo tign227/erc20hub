@@ -80,4 +80,37 @@ contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
       });
     });
   });
+
+  describe("Approve token", () => {
+    let result;
+    let approveAmount;
+
+    beforeEach(async () => {
+      approveAmount = 100;
+      result = await token.approve(exchange, approveAmount, { from: owner });
+    });
+
+    describe("success", () => {
+      it("Test allowance of exchage", async () => {
+        const allowance = await token.allowance(owner, exchange);
+        allowance.toString().should.equal(approveAmount.toString());
+      });
+
+      it("Test Approval event", async () => {
+        const log = result.logs[0];
+        log.event.should.equal("Approval");
+        const args = log.args;
+        args.owner.toString().should.equal(owner);
+        args.spender.toString().should.equal(exchange);
+        args.value.toString().should.equal(approveAmount.toString());
+      });
+    });
+
+    describe("failure", () => {
+      it("Test invalid spender", async () => {
+        await token.approve(0x0, approveAmount, { from: owner }).should.be
+          .rejected;
+      });
+    });
+  });
 });
