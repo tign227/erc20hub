@@ -35,7 +35,7 @@ contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
     });
   });
 
-  describe("Send token", () => {
+  describe("Transfer token", () => {
     let transferAmount = 1000;
     let result;
 
@@ -72,6 +72,10 @@ contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
       it("Test insufficient balances", async () => {
         let invalidAmount = "1000000000";
         token.transfer(receiver, invalidAmount, { from: owner }).should.be
+          .rejected;
+
+        invalidAmount = "1";
+        token.transfer(receiver, invalidAmount, { from: receiver }).should.be
           .rejected;
       });
 
@@ -110,6 +114,66 @@ contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
       it("Test invalid spender", async () => {
         await token.approve(0x0, approveAmount, { from: owner }).should.be
           .rejected;
+      });
+    });
+  });
+
+  describe("Delegated transfer token", () => {
+    let result;
+    let approveAmount;
+    let transferAmount;
+    beforeEach(async () => {
+      approveAmount = 100;
+      transferAmount = 99;
+      await token.approve(exchange, approveAmount, { from: owner });
+    });
+
+    describe("sucess", () => {
+      beforeEach(async () => {
+        result = await token.transferFrom(owner, receiver, transferAmount, {
+          from: exchange,
+        });
+      });
+
+      it("Test token balances", async () => {
+        let balance;
+        balance = await token.balanceOf(owner);
+        balance
+          .toString()
+          .should.equal((totalSupply - transferAmount).toString());
+
+        balance = await token.balanceOf(receiver);
+        balance.toString().should.equal(transferAmount.toString());
+      });
+
+      it("Test allowance of exchane", async () => {
+        const allowance = await token.allowance(owner, exchange);
+        allowance
+          .toString()
+          .should.equal((approveAmount - transferAmount).toString());
+      });
+
+      it("Transfer event", async () => {
+        const log = result.logs[0];
+        log.event.should.equal("Transfer");
+
+        const args = log.args;
+        args.from.toString().should.equal(owner);
+        args.to.toString().should.equal(receiver);
+        args.value.toString().should.equal(transferAmount.toString());
+      });
+    });
+
+    describe("failure", () => {
+      it("Test insufficient allwance", async () => {
+        await token.transferFrom(owner, receiver, approveAmount + 1, {
+          from: owner,
+        }).should.be.rejected;
+      });
+
+      it("Test invalid recipient", async () => {
+        await token.transferFrom(owner, 0x0, transferAmount, { from: owner })
+          .should.be.rejected;
       });
     });
   });
