@@ -43,18 +43,21 @@ contract Exchange {
 
     function depositEther() public payable {
         tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender] + msg.value;
+        //balanced of msg.sender will reduce automatically
         emit Deposit(ETHER, msg.sender, msg.value, tokens[ETHER][msg.sender]);
     }
 
     function withdrawEther(uint256 _amount) public {
         require(tokens[ETHER][msg.sender] >= _amount);
         tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender] - _amount;
+        //transfer Ether from exchange to msg.sender
         payable(msg.sender).transfer(_amount);
         emit Withdraw(ETHER, msg.sender, _amount, tokens[ETHER][msg.sender]);
     }
 
     function depositToken(address _token, uint256 _amount) public {
         require(_token != ETHER);
+        //transfer token to msg.sender and required Approve action
         require(Token(_token).transferFrom(msg.sender, address(this), _amount));
         tokens[_token][msg.sender] = tokens[_token][msg.sender] + _amount;
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
@@ -64,6 +67,7 @@ contract Exchange {
         require(_token != ETHER);
         require(tokens[_token][msg.sender] >= _amount);
         tokens[_token][msg.sender] = tokens[_token][msg.sender] - _amount;
+        //trasfer action is enough
         require(Token(_token).transfer(msg.sender, _amount));
         emit Withdraw(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
