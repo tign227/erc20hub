@@ -1,7 +1,7 @@
 const { should } = require("chai");
 const ETHER_ADDRESS = "0x0000000000000000000000000000000000000000";
 const Exchange = artifacts.require("./Exchange");
-const Token = artifacts.require("./TGNToken");
+const Token = artifacts.require("./Token");
 
 require("chai").use(require("chai-as-promised")).should();
 

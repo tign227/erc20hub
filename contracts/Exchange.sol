@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import "./TGNToken.sol";
+import "./Token.sol";
 
 contract Exchange {
     // TODO:
@@ -55,9 +55,7 @@ contract Exchange {
 
     function depositToken(address _token, uint256 _amount) public {
         require(_token != ETHER);
-        require(
-            TGNToken(_token).transferFrom(msg.sender, address(this), _amount)
-        );
+        require(Token(_token).transferFrom(msg.sender, address(this), _amount));
         tokens[_token][msg.sender] = tokens[_token][msg.sender] + _amount;
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
@@ -66,7 +64,7 @@ contract Exchange {
         require(_token != ETHER);
         require(tokens[_token][msg.sender] >= _amount);
         tokens[_token][msg.sender] = tokens[_token][msg.sender] - _amount;
-        require(TGNToken(_token).transfer(msg.sender, _amount));
+        require(Token(_token).transfer(msg.sender, _amount));
         emit Withdraw(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
 

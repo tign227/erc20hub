@@ -1,6 +1,6 @@
 const { should } = require("chai");
 
-const TGNToken = artifacts.require("TGNToken");
+const Token = artifacts.require("Token");
 
 require("chai").use(require("chai-as-promised")).should();
 
@@ -9,7 +9,7 @@ contract("TGNToken ERC20 Token Test", ([owner, receiver, exchange]) => {
   let totalSupply = 10000;
 
   beforeEach(async () => {
-    token = await TGNToken.new(totalSupply);
+    token = await Token.new(totalSupply);
   });
 
   describe("Token deployment", () => {
