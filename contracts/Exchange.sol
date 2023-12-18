@@ -12,6 +12,7 @@ contract Exchange {
     address public feeAccount;
     uint256 public feePercentage;
     address constant ETHER = address(0);
+    uint256 public orderId;
     //token address => user address => total
     mapping(address => mapping(address => uint256)) public tokens;
 
@@ -114,9 +115,9 @@ contract Exchange {
         uint256 amountGive
     ) public {
         uint time = block.timestamp;
-        uint256 id = 1;
-        orders[id] = Order(
-            id,
+        orderId++;
+        orders[orderId] = Order(
+            orderId,
             msg.sender,
             tokenGet,
             amountGet,
@@ -124,8 +125,9 @@ contract Exchange {
             amountGive,
             time
         );
+
         emit OrderCreated(
-            id,
+            orderId,
             msg.sender,
             tokenGet,
             amountGet,
