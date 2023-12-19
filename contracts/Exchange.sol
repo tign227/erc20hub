@@ -18,6 +18,7 @@ contract Exchange {
 
     mapping(uint256 => Order) public orders;
     mapping(uint256 => bool) public cancelledOrders;
+    mapping(uint256 => bool) public filledOrders;
 
     //event
     event Deposit(
@@ -51,6 +52,17 @@ contract Exchange {
         uint256 _amountGet,
         address _tokenGive,
         uint256 _amountGive,
+        uint256 _timestamp
+    );
+
+    event OrderTraded(
+        uint256 _id,
+        address _user,
+        address _tokenGet,
+        uint256 _amountGet,
+        address _tokenGive,
+        uint256 _amountGive,
+        address _userFilee,
         uint256 _timestamp
     );
 
@@ -138,7 +150,7 @@ contract Exchange {
     }
 
     function cancelOrder(uint256 id) public {
-        Order storage order = orders[id];
+        Order memory order = orders[id];
         require(order.id == id);
         require(order.user == msg.sender);
         cancelledOrders[id] = true;
@@ -150,6 +162,55 @@ contract Exchange {
             order.tokenGive,
             order.amountGive,
             order.timestamp
+        );
+    }
+
+    function fillOrder(uint256 id) public {
+        //verification
+        require(id > 0 && id <= orderId);
+        require(!cancelledOrders[id]);
+        require(!filledOrders[id]);
+        Order memory order = orders[id];
+        _trade(
+            order.id,
+            order.user,
+            order.tokenGet,
+            order.amountGet,
+            order.tokenGive,
+            order.amountGive
+        );
+        filledOrders[id] = true;
+    }
+
+    function _trade(
+        uint256 id,
+        address user,
+        address tokenGet,
+        uint256 amountGet,
+        address tokenGive,
+        uint256 amountGive
+    ) internal {
+        //charge fee
+        uint fee = (amountGive * feePercentage) / 100;
+        tokens[tokenGive][feeAccount] += fee;
+
+        //give
+        tokens[tokenGive][msg.sender] += amountGive;
+        tokens[tokenGive][user] -= amountGive;
+
+        //get
+        tokens[tokenGet][msg.sender] -= (amountGet + fee);
+        tokens[tokenGet][user] += amountGet;
+
+        emit OrderTraded(
+            id,
+            user,
+            tokenGet,
+            amountGet,
+            tokenGive,
+            amountGive,
+            msg.sender,
+            block.timestamp
         );
     }
 }

@@ -259,36 +259,65 @@ contract(
     });
 
     describe("Cancel Order", async () => {
-      let result;
-      let cancelledOrderId;
-
-      beforeEach(async () => {
-        result = await exchange.makeOrder(token.address, 1, ETHER_ADDRESS, 1, {
-          from: orderUser,
+      describe("success", async () => {
+        let result;
+        let cancelledOrderId;
+        beforeEach(async () => {
+          result = await exchange.makeOrder(
+            token.address,
+            1,
+            ETHER_ADDRESS,
+            1,
+            {
+              from: orderUser,
+            }
+          );
+          cancelledOrderId = "1";
+          result = await exchange.cancelOrder(cancelledOrderId, {
+            from: orderUser,
+          });
         });
-        cancelledOrderId = "1";
-        result = await exchange.cancelOrder(cancelledOrderId, {
-          from: orderUser,
+
+        it("Test cancel order", async () => {
+          const orderCancelled = await exchange.cancelledOrders(
+            cancelledOrderId,
+            { from: orderUser }
+          );
+          orderCancelled.should.equal(true);
+        });
+
+        it("Test event on cancel order", async () => {
+          const logs = result.logs[0];
+          const event = logs.event;
+          event.should.equal("OrderCancelled");
+          const args = logs.args;
+          args._id.toString().should.equal(cancelledOrderId);
+          args._user.should.equal(orderUser);
+          args._tokenGet.should.equal(token.address);
+          args._amountGet.toString().should.equal("1");
+          args._tokenGive.should.equal(ETHER_ADDRESS);
+          args._amountGive.toString().should.equal("1");
+          args._timestamp.toString().length.should.be.at.least(1);
         });
       });
 
-      it("Test cancel order", async () => {
-        const orderCancelled = await exchange.cancelledOrders(cancelledOrderId);
-        orderCancelled.should.equal(true);
-      });
+      describe("failure", async () => {
+        beforeEach(async () => {
+          await exchange.makeOrder(token.address, 1, ETHER_ADDRESS, 1, {
+            from: orderUser,
+          });
+        });
+        it("Test cancel illegal id", async () => {
+          await exchange.cancelOrder("999", {
+            from: orderUser,
+          }).should.be.rejected;
+        });
 
-      it("Test event on cancel order", async () => {
-        const logs = result.logs[0];
-        const event = logs.event;
-        event.should.equal("OrderCancelled");
-        const args = logs.args;
-        args._id.toString().should.equal(cancelledOrderId);
-        args._user.should.equal(orderUser);
-        args._tokenGet.should.equal(token.address);
-        args._amountGet.toString().should.equal("1");
-        args._tokenGive.should.equal(ETHER_ADDRESS);
-        args._amountGive.toString().should.equal("1");
-        args._timestamp.toString().length.should.be.at.least(1);
+        it("Test cancel illegal user", async () => {
+          await exchange.cancelOrder("999", {
+            from: tokenUser,
+          }).should.be.rejected;
+        });
       });
     });
   }
