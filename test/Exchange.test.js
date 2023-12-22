@@ -5,6 +5,11 @@ const Token = artifacts.require("./Token");
 
 require("chai").use(require("chai-as-promised")).should();
 
+const ether = (n) => {
+  return new web3.utils.BN(web3.utils.toWei(n.toString(), "ether"));
+};
+const tokens = (n) => ether(n);
+
 contract(
   "ERC20 Token Exchange Test",
   ([deployer, feeAccount, etherUser, tokenUser, orderUser]) => {
@@ -14,7 +19,7 @@ contract(
 
     beforeEach(async () => {
       exchange = await Exchange.new(feeAccount, feePercentage);
-      token = await Token.new(100000000000);
+      token = await Token.new(tokens(100));
     });
 
     describe("Exchange deployment", () => {
@@ -315,6 +320,91 @@ contract(
 
         it("Test cancel illegal user", async () => {
           await exchange.cancelOrder("999", {
+            from: tokenUser,
+          }).should.be.rejected;
+        });
+      });
+    });
+
+    describe("Fill Order", async () => {
+      let result;
+
+      beforeEach(async () => {
+        //orderuser give Ether back token
+        await exchange.depositEther({ from: orderUser, value: ether(1) });
+        //tokenUser give token (more than order get amount)and back ether
+        await token.transfer(tokenUser, tokens(2), { from: deployer });
+        await token.approve(exchange.address, tokens(2), {
+          from: tokenUser,
+        });
+        await exchange.depositToken(token.address, tokens(2), {
+          from: tokenUser,
+        });
+        await exchange.makeOrder(
+          token.address,
+          tokens(1),
+          ETHER_ADDRESS,
+          ether(1),
+          {
+            from: orderUser,
+          }
+        );
+      });
+
+      describe("success", async () => {
+        beforeEach(async () => {
+          result = await exchange.fillOrder("1", { from: tokenUser });
+        });
+        it("Test balance after filling order", async () => {
+          //token
+          let balance = await exchange.balanceOf(token.address, tokenUser);
+          balance.toString().should.equal(tokens(0.9).toString());
+          balance = await exchange.balanceOf(token.address, orderUser);
+          balance.toString().should.equal(tokens(1).toString());
+          //ether
+          balance = await exchange.balanceOf(ETHER_ADDRESS, tokenUser);
+          balance.toString().should.equal(ether(1).toString());
+          balance = await exchange.balanceOf(ETHER_ADDRESS, orderUser);
+          balance.toString().should.equal("0");
+          //fee account
+          const feeAccount = await exchange.feeAccount();
+          balance = await exchange.balanceOf(token.address, feeAccount);
+          balance.toString().should.equal(tokens(0.1).toString());
+        });
+
+        it("Test event on fill order", async () => {
+          const logs = result.logs[0];
+          const event = logs.event;
+          event.should.equal("OrderTraded");
+          const args = logs.args;
+          args._id.toString().should.equal("1");
+          args._user.should.equal(orderUser);
+          args._tokenGet.should.equal(token.address);
+          args._amountGet.toString().should.equal(tokens(1).toString());
+          args._tokenGive.should.equal(ETHER_ADDRESS);
+          args._amountGive.toString().should.equal(ether(1).toString());
+          args._userFill.should.equal(tokenUser);
+          args._timestamp.toString().length.should.be.at.least(1);
+        });
+      });
+
+      describe("failure", async () => {
+        it("Test fill invalid id", async () => {
+          await exchange.fillOrder("999", {
+            from: tokenUser,
+          }).should.be.rejected;
+        });
+
+        it("Test alread-filled order", async () => {
+          await exchange.fillOrder("1", { from: tokenUser });
+          await exchange.fillOrder("1", {
+            from: tokenUser,
+          }).should.be.rejected;
+        });
+
+        it("Test cancelled order", async () => {
+          await exchange.cancelOrder("1", { from: orderUser });
+          await exchange.fillOrder("1", {
             from: tokenUser,
           }).should.be.rejected;
         });

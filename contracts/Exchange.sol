@@ -62,7 +62,7 @@ contract Exchange {
         uint256 _amountGet,
         address _tokenGive,
         uint256 _amountGive,
-        address _userFilee,
+        address _userFill,
         uint256 _timestamp
     );
 
@@ -127,7 +127,7 @@ contract Exchange {
         uint256 amountGive
     ) public {
         uint time = block.timestamp;
-        orderId++;
+        orderId += 1;
         orders[orderId] = Order(
             orderId,
             msg.sender,
@@ -170,7 +170,7 @@ contract Exchange {
         require(id > 0 && id <= orderId);
         require(!cancelledOrders[id]);
         require(!filledOrders[id]);
-        Order memory order = orders[id];
+        Order storage order = orders[id];
         _trade(
             order.id,
             order.user,
@@ -191,16 +191,16 @@ contract Exchange {
         uint256 amountGive
     ) internal {
         //charge fee
-        uint fee = (amountGive * feePercentage) / 100;
-        tokens[tokenGive][feeAccount] += fee;
+        uint256 fee = (amountGive * feePercentage) / 100;
 
         //give
-        tokens[tokenGive][msg.sender] += amountGive;
         tokens[tokenGive][user] -= amountGive;
+        tokens[tokenGive][msg.sender] += amountGive;
 
         //get
-        tokens[tokenGet][msg.sender] -= (amountGet + fee);
         tokens[tokenGet][user] += amountGet;
+        tokens[tokenGet][feeAccount] += fee;
+        tokens[tokenGet][msg.sender] -= (amountGet + fee);
 
         emit OrderTraded(
             id,
