@@ -5,10 +5,6 @@ pragma solidity ^0.8.20;
 import "./Token.sol";
 
 contract Exchange {
-    // [X] Make order
-    // [X] Cancel order
-    // [X] Fill order
-    // [X] Charge fees
     address public feeAccount;
     uint256 public feePercentage;
     address constant ETHER = address(0);
@@ -150,7 +146,7 @@ contract Exchange {
     }
 
     function cancelOrder(uint256 id) public {
-        Order memory order = orders[id];
+        Order storage order = orders[id];
         require(order.id == id);
         require(order.user == msg.sender);
         cancelledOrders[id] = true;
